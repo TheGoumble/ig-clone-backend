@@ -1,23 +1,42 @@
-import { Router, Request, Response } from "express";
-import { PhotoServices } from "../services/photo-services";
+import { Router } from 'express';
+import { photoServices } from '../services/photo-services';
 
-export const photoRouter = Router()
+export const photoRouter = Router();
 
-photoRouter.get("/", async (req: Request, res: Response) => {
-    const result = await PhotoServices.getAllPhotos()
+photoRouter.get('/', async (req, res) => {
+  const photos = await photoServices.getAllPhotos();
+  res.status(200).json(photos);
+});
 
-    res.status(200).send(result)
-})
+photoRouter.post('/', async (req, res) => {
+  const { photoUrl, description } = req.body;
 
-photoRouter.post("/", async (req: Request, res: Response) => {
-    const {photoUrl, description} = req.body
+  if (!photoUrl) {
+    res.status(400).json({ message: 'photoUrl is required' });
+    return;
+  }
+  const photo = {
+    photoUrl,
+    comments: [],
+    likes: 0,
+    description,
+  };
+  const id = await photoServices.createPhoto(photo);
 
-    if(!photoUrl){
-        res.status(400).send("PhotoUrl is required")
-        return
-    }
+  const createdPhoto = { id, ...photo };
 
-    const insertedId = await PhotoServices.createPhoto(photoUrl, description)
+  res.status(201).json(createdPhoto);
+});
 
-    res.status(201).send({insertedId})
-})
+// PATCH /photo/{PHOTO_ID} with a body of {likes: 1}
+photoRouter.patch('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { likes } = req.body;
+
+  if(!likes){
+    res.status(400).send('Likes are required.')
+  }
+
+  const photo = await photoServices.updateLikes(id, likes as number);
+  res.status(200).json(photo);
+});
